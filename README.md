@@ -42,6 +42,7 @@
       url: https://universe.roboflow.com/pumpquin/chicken-segmentation-byru8-j3yvi/dataset/1
 
  #CONVERTING BEST.PT FILE TO ONNX FORMAT FILE
+ 
      from ultralytics import YOLO
      model = YOLO("runs/detect/train/weights/best.pt") 
      model.export(format="onnx")
