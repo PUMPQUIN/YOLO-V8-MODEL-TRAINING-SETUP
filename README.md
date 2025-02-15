@@ -104,5 +104,14 @@
      model = YOLO("runs/detect/train/weights/best.pt") 
      model.export(format="onnx")
 
+#TEST CODE USING PRE-TRAINED YOLOV8 FROM ULTRALYTICS
+
+    from ultralytics import YOLO
+    model = YOLO("yolov8n.pt") 
+    image_path = "C:/Users/FRANCIS QUINTIN JR/PycharmProjects/CHICK/pictures/CHICKEN2.jpg"
+    results = model(image_path, conf=0.1)  
+    for result in results:
+        result.show()  
+
 
    
