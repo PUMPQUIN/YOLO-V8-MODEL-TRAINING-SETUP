@@ -1,3 +1,14 @@
+# CHECKING IF YOU HAVE GPU TO YOUR PYTHON SCRIPT ENVIRONMENT USING PYCHARM
+
+    import torch
+
+    print("✅ CUDA Available:", torch.cuda.is_available())
+    if torch.cuda.is_available():
+        print("🖥️ GPU Name:", torch.cuda.get_device_name(0))
+    else:
+        print("⚠️ No GPU detected. Training will use CPU only.")
+
+
 # YOLO-V8-MODEL-TRAINING-SETUP
     import torch
     import os
