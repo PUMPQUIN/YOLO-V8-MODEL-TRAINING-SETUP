@@ -3,28 +3,32 @@
     import os
     from ultralytics import YOLO
 
+    # Set PyTorch memory config to prevent OOM
     os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
 
+    # Clear cache and optimize cuDNN backend
     torch.cuda.empty_cache()
-
     torch.backends.cudnn.benchmark = True
 
     if __name__ == '__main__':
-  
+        # Load YOLOv8 nano model (you can also try 'yolov8s.pt' for more accuracy)
         model = YOLO("yolov8n.pt")
-   
+
+        # Train model on your custom chicken dataset
         results = model.train(
-            data="config.yaml",  # Path to dataset configuration
-            epochs=100,          # Number of training epochs
-            imgsz=640,           # Higher resolution for better accuracy
-            batch=4,             # Lower batch size to fit into 4GB GPU
-            workers=0,           # Avoid multiprocessing issues on Windows
-            amp=True             # Use Automatic Mixed Precision (reduces memory usage)
+            data="config.yaml",   # Path to your dataset config file
+            epochs=100,           # Number of epochs (you can lower for testing)
+            imgsz=640,            # Input image size
+            batch=4,              # Smaller batch for limited VRAM (4GB~6GB GPUs)
+            workers=0,            # Disable multiprocessing (avoid issues on Windows)
+            amp=True              # Automatic Mixed Precision (faster & less memory)
         )
 
-        model.export(format="onnx")
+        # Export model in PyTorch (.pt) format
+        model.export(format="pt")  # You will get a 'best.pt' file
 
-        print("✅ Training completed with optimized settings!")
+        print("✅ Training complete. Model exported in PyTorch format!")
+
 
 #TEST CODE MAIN.PY FILE
 
