@@ -160,6 +160,82 @@
     for result in results:
         result.show() 
 
+
+#TEST CODE USING ESP32 CAM CHICKEN COUNTER
+   
+    import requests
+    import cv2
+    import numpy as np
+    import re
+    from ultralytics import YOLO
+
+    # Load YOLOv8 model
+    model_path = "runs/detect/train/weights/best.pt"
+    model = YOLO(model_path)
+
+    threshold = 0.5
+    stream_url = "http://192.168.200.14/stream"
+
+    print("📡 Connecting to ESP32-CAM stream...")
+
+    # Start the MJPEG stream
+    stream = requests.get(stream_url, stream=True)
+    if stream.status_code != 200:
+        raise RuntimeError(f"❌ Failed to connect. Status code: {stream.status_code}")
+
+    # MJPEG frame pattern (JPEG start/end)
+    bytes_data = b""
+    pattern = re.compile(b'\xff\xd8.*?\xff\xd9', re.DOTALL)
+
+    print("✅ Connected. Running YOLO detection. Press 'q' to quit.")
+
+    try:
+        for chunk in stream.iter_content(chunk_size=4096):
+            bytes_data += chunk
+
+            # Search for complete JPEG frames
+            matches = list(pattern.finditer(bytes_data))
+            for match in matches:
+                jpg = match.group()
+                bytes_data = bytes_data[match.end():]  # discard used bytes
+
+                try:
+                    img_array = np.frombuffer(jpg, dtype=np.uint8)
+                    frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+                    if frame is None:
+                        continue
+                except Exception as e:
+                    print(f"⚠️ JPEG decode error: {e}")
+                    continue
+
+                # Run YOLOv8 detection
+                results = model(frame, conf=threshold)
+
+                for box in results[0].boxes:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    conf = float(box.conf[0])
+                    class_id = int(box.cls[0])
+                    label = results[0].names[class_id]
+
+                    if label == "CHICKEN":
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                        cv2.putText(frame, f"{label} {conf:.2f}", (x1, y1 - 10),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+                cv2.imshow("ESP32-CAM YOLO Detection", frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    raise KeyboardInterrupt
+
+    except KeyboardInterrupt:
+        print("\n🛑 Interrupted by user.")
+    except Exception as e:
+        print(f"❌ Runtime error: {e}")
+    finally:
+        stream.close()
+        cv2.destroyAllWindows()
+        print("✅ Stream closed and resources released.")
+
+
 #TEST CODE USING CCTV CHICKEN COUNTER
 
     import os
