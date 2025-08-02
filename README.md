@@ -45,52 +45,65 @@
 
     import os
     import cv2
-    import numpy as np
     from ultralytics import YOLO
 
+    # Allow some libraries to avoid OpenMP issues
     os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
 
-    VIDEOS_DIR = os.path.join('.', 'videos')  # Path to videos folder
-    video_path = os.path.join(VIDEOS_DIR, 'CHICKEN.mp4')  # Input video path
-    video_path_out = f"{os.path.splitext(video_path)[0]}_out.mp4"  # Output video path
-    model_path = os.path.join('.', 'runs', 'detect', 'train', 'weights', 'best.pt')  # YOLO model path
+    # Define paths
+    VIDEOS_DIR = os.path.join('.', 'videos')
+    video_path = os.path.join(VIDEOS_DIR, 'DUSK #2.mp4')  # Your input video
+    video_path_out = f"{os.path.splitext(video_path)[0]}_out.mp4"
+    model_path = os.path.join('.', 'runs', 'detect', 'train', 'weights', 'best.pt')  # Trained YOLOv8 model
 
+    # Check paths
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video file not found: {os.path.abspath(video_path)}")
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model file not found: {os.path.abspath(model_path)}")
 
+    # Load YOLOv8 model
     model = YOLO(model_path)
 
+    # Open video
     cap = cv2.VideoCapture(video_path)
     ret, frame = cap.read()
     if not ret:
         raise ValueError(f"Failed to read the video file: {video_path}")
 
+    # Get frame size and fps
     H, W, _ = frame.shape
-    fps = int(cap.get(cv2.CAP_PROP_FPS))  # Get video FPS
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
     out = cv2.VideoWriter(video_path_out, cv2.VideoWriter_fourcc(*'mp4v'), fps, (W, H))
 
-    threshold = 0.1
+    threshold = 0.5  # Confidence threshold
 
-    print("Processing video...")
+    print("🔄 Processing video... Press 'q' to quit.")
 
     try:
         while ret:
             frame_copy = frame.copy()
+
+            # Run YOLOv8 inference
             results = model(frame_copy, conf=threshold)
 
-            for result in results[0].boxes.data.cpu().numpy():
-                x1, y1, x2, y2, score, class_id = result
-                if score > threshold and results[0].names[int(class_id)] == "chicken":
-                    x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
-                    cv2.rectangle(frame_copy, (x1, y1), (x2, y2), (0, 255, 0), 2)  # Green box
-                    cv2.putText(frame_copy, "Chicken", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+            # Draw detections
+            for box in results[0].boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])  # Bounding box
+                conf = float(box.conf[0])               # Confidence score
+                class_id = int(box.cls[0])              # Class ID
+                label = results[0].names[class_id]      # Class label
 
+                if conf > threshold and label == "CHICKEN":
+                    cv2.rectangle(frame_copy, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(frame_copy, f"{label} {conf:.2f}", (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+            # Write and show
             out.write(frame_copy)
-            cv2.imshow("Chicken Detection", frame_copy)  # Show output frame
+            cv2.imshow("POULTRIYA", frame_copy)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):  # Press 'q' to quit
+            if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
             ret, frame = cap.read()
@@ -100,7 +113,7 @@
         out.release()
         cv2.destroyAllWindows()
 
-    print(f"Processing complete. Output saved to {video_path_out}")
+    print(f"✅ Processing complete. Output saved to: {video_path_out}")
 
 
 #CONFIG.YAML FILE
